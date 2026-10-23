@@ -29,24 +29,28 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
-      - name: Install Chromium for browser tests
-        timeout-minutes: 10
-        run: |
-          npm i --no-save playwright@1.56.0
-          npx playwright install --with-deps chromium
+      # Drive the runner's preinstalled Google Chrome (no browser download).
+      - name: Install Playwright
+        timeout-minutes: 3
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+        run: npm i --no-save playwright@1.56.0 && google-chrome --version
 
       - name: Build
         run: npm run build
 
       - name: "Browser test: annotate and save"
+        env: { PW_CHANNEL: chrome }
         timeout-minutes: 3
         run: npm run build:testlib && node test/browser/webview.test.mjs
 
       - name: "Browser test: re-applied annotations"
+        env: { PW_CHANNEL: chrome }
         timeout-minutes: 3
         run: node test/browser/merged.test.mjs
 
       - name: "Browser test: sidebar"
+        env: { PW_CHANNEL: chrome }
         timeout-minutes: 3
         run: node test/browser/sidebar.test.mjs
 
