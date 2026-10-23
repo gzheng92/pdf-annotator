@@ -30,5 +30,13 @@ export function start(pagePort = 8801, resPort = 8802) {
     rsp.writeHead(200, { "Content-Type": "text/html" });
     rsp.end(html);
   }).listen(pagePort);
-  return { url: `${pageOrigin}/`, close: () => { res.close(); page.close(); } };
+  // Fail fast instead of hanging CI if something never resolves.
+  const watchdog = setTimeout(() => { console.error("✗ test timed out"); process.exit(1); }, 120000);
+  watchdog.unref();
+  return {
+    url: `${pageOrigin}/`,
+    close: () => {
+      for (const s of [res, page]) { s.closeAllConnections?.(); s.close(); }
+    },
+  };
 }

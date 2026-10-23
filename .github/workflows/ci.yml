@@ -29,11 +29,26 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
-      - name: Browser tests (PDF.js viewer in headless Chromium)
+      - name: Install Chromium for browser tests
+        timeout-minutes: 10
         run: |
-          npx --yes playwright@1.56.0 install --with-deps chromium
           npm i --no-save playwright@1.56.0
-          npm run test:browser
+          npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: "Browser test: annotate and save"
+        timeout-minutes: 3
+        run: npm run build:testlib && node test/browser/webview.test.mjs
+
+      - name: "Browser test: re-applied annotations"
+        timeout-minutes: 3
+        run: node test/browser/merged.test.mjs
+
+      - name: "Browser test: sidebar"
+        timeout-minutes: 3
+        run: node test/browser/sidebar.test.mjs
 
       - name: Check tag matches package.json version
         if: startsWith(github.ref, 'refs/tags/v')
