@@ -1,0 +1,6 @@
+/* Things that don't work inside a VS Code webview (VS Code owns opening and printing). */
+#printButton,
+#secondaryPrint,
+#secondaryOpenFile {
+  display: none !important;
+}

@@ -1,0 +1,11 @@
+src/**
+test/**
+scripts/**
+node_modules/**
+.github/**
+.gitignore
+tsconfig.json
+**/*.map
+!dist/extension.js.map
+media/pdfjs/.version
+.vscode/**

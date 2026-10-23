@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.vsix
+media/pdfjs/
+test/.lib/
+test/.out/
+.DS_Store

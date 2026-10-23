@@ -1,0 +1,140 @@
+{
+  "name": "pdf-annotator",
+  "displayName": "PDF Annotator",
+  "description": "View and annotate PDFs inside VS Code (highlight, comment, text, draw, images, signatures). Backs up your annotations when the PDF is overwritten (e.g. LaTeX rebuilds) and can re-apply them to the new version.",
+  "version": "0.2.0",
+  "publisher": "gzheng92",
+  "author": {
+    "name": "Geoffery Zheng"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gzheng92/pdf-annotator.git"
+  },
+  "homepage": "https://github.com/gzheng92/pdf-annotator#readme",
+  "bugs": {
+    "url": "https://github.com/gzheng92/pdf-annotator/issues"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "pdf",
+    "annotate",
+    "annotation",
+    "highlight",
+    "latex",
+    "synctex",
+    "reverse search",
+    "viewer"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "pdfAnnotator.editor",
+        "displayName": "PDF Annotator",
+        "selector": [
+          {
+            "filenamePattern": "*.pdf"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "pdfAnnotator.reapplyFromBackup",
+        "title": "Re-apply Annotations from Backup\u2026",
+        "category": "PDF Annotator"
+      },
+      {
+        "command": "pdfAnnotator.openBackupFolder",
+        "title": "Open Backup Folder",
+        "category": "PDF Annotator"
+      },
+      {
+        "command": "pdfAnnotator.exportAnnotations",
+        "title": "Export Annotations as JSON\u2026",
+        "category": "PDF Annotator"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "pdfAnnotator.reapplyFromBackup",
+          "when": "activeCustomEditorId == pdfAnnotator.editor"
+        },
+        {
+          "command": "pdfAnnotator.exportAnnotations",
+          "when": "activeCustomEditorId == pdfAnnotator.editor"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "pdfAnnotator.reapplyFromBackup",
+          "when": "activeCustomEditorId == pdfAnnotator.editor",
+          "group": "navigation@9"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "PDF Annotator",
+      "properties": {
+        "pdfAnnotator.backupFolder": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Where annotation backups are written when an open PDF is overwritten on disk. Leave empty to use `<system temp>/vscode-pdf-annotator`."
+        },
+        "pdfAnnotator.onOverwrite": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "reapply",
+            "discard"
+          ],
+          "enumDescriptions": [
+            "Back up annotations, load the new PDF, and offer to re-apply the annotations.",
+            "Back up annotations, load the new PDF, and automatically copy the annotations onto it (unsaved until you press Save).",
+            "Back up annotations and load the new PDF without re-applying."
+          ],
+          "default": "ask",
+          "description": "What to do with your annotations when the open PDF is overwritten by another program."
+        },
+        "pdfAnnotator.maxBackupsPerFile": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "description": "How many backups to keep per PDF; older ones are deleted."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "fetch-pdfjs": "node scripts/fetch-pdfjs.mjs",
+    "build": "npm run fetch-pdfjs && esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node18 --external:vscode --outfile=dist/extension.js --minify --sourcemap",
+    "build:testlib": "esbuild src/annotations.ts src/backup.ts src/synctex.ts src/html.ts --bundle --platform=node --format=esm --outdir=test/.lib --out-extension:.js=.mjs --log-level=warning",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "npm run build:testlib && node --test \"test/unit/*.test.mjs\"",
+    "test:browser": "npm run build && npm run build:testlib && node test/browser/webview.test.mjs && node test/browser/merged.test.mjs && node test/browser/sidebar.test.mjs",
+    "vscode:prepublish": "npm run build",
+    "package": "npm run typecheck && vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "pdf-lib": "1.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/vscode": "1.90.0",
+    "@vscode/vsce": "^4.0.0",
+    "adm-zip": "^0.5.16",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  }
+}

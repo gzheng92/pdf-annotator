@@ -1,0 +1,34 @@
+import { chromium } from "./playwright.mjs";
+import assert from "node:assert/strict";
+import { readFileSync } from "fs";
+import { start } from "./harness.mjs";
+import { copyAnnotations, listAnnotations } from "../.lib/annotations.mjs";
+import { makePdf } from "../fixtures/make-pdf.mjs";
+const server = start(8811, 8812);
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
+await page.goto(server.url);
+await page.waitForFunction(() => window.__toHost.some((m) => m.type === "ready"));
+await page.evaluate((arr) => window.postMessage({ type: "load", data: new Uint8Array(arr), filename: "paper.pdf", dirty: true }, "*"), Array.from((await copyAnnotations(readFileSync("test/.out/out-annotated.pdf"), await makePdf("2"))).bytes));
+await page.waitForFunction(() => window.__toHost.some((m) => m.type === "loaded"));
+await page.waitForTimeout(1200);
+const dirty = await page.evaluate(() => window.__toHost.some((m) => m.type === "dirty"));
+console.log("dirty posted for re-applied load:", dirty);
+assert.ok(dirty);
+await page.evaluate(() => window.postMessage({ type: "getData", requestId: 9 }, "*"));
+await page.waitForFunction(() => window.__toHost.some((m) => m.type === "data"));
+const data = await page.evaluate(() => Array.from(window.__toHost.find((m) => m.type === "data").data));
+const n = (await listAnnotations(new Uint8Array(data))).length;
+console.log("annotations after viewer round-trip:", n);
+assert.equal(n, 3);
+await page.screenshot({ path: "test/.out/shot-merged.png" });
+// Ctrl+S inside the viewer asks the host to save
+await page.click("#viewerContainer");
+await page.keyboard.press("Control+s"); // handled by VS Code itself, so ignored here
+await page.waitForTimeout(1200);
+await page.click("#downloadButton");
+await page.waitForTimeout(300);
+const saves = await page.evaluate(() => window.__toHost.filter((m) => m.type === "requestSave").length);
+console.log("toolbar save requests (Ctrl+S ignored, button counted):", saves);
+assert.equal(saves, 1);
+await browser.close(); server.close();

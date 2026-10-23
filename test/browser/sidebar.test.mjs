@@ -1,0 +1,27 @@
+import { chromium } from "./playwright.mjs";
+import assert from "node:assert/strict";
+import { PDFDocument, PDFName } from "pdf-lib";
+import { start } from "./harness.mjs";
+import { makePdf } from "../fixtures/make-pdf.mjs";
+const doc = await PDFDocument.load(await makePdf("1"));
+doc.catalog.set(PDFName.of("PageMode"), PDFName.of("UseThumbs"));
+const bytes = await doc.save();
+const server = start(8821, 8822);
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.goto(server.url);
+await page.waitForFunction(() => window.__toHost.some((m) => m.type === "ready"));
+const load = async (extra, n) => {
+  await page.evaluate(([a, e]) => window.postMessage({ type: "load", data: new Uint8Array(a), filename: "x.pdf", ...e }, "*"), [Array.from(bytes), extra]);
+  await page.waitForFunction((n) => window.__toHost.filter((m) => m.type === "loaded").length >= n, n);
+  await page.waitForTimeout(800);
+  return page.evaluate(() => (PDFViewerApplication.viewsManager ?? PDFViewerApplication.pdfSidebar).isOpen);
+};
+const first = await load({}, 1);
+console.log("PDF asks for thumbnails; sidebar open on first load:", first);
+assert.equal(first, false);
+await page.click("#viewsManagerToggleButton"); await page.waitForTimeout(300);
+const kept = await load({ preserveView: true }, 2);
+console.log("user opened it; still open after overwrite reload:", kept);
+assert.equal(kept, true);
+await browser.close(); server.close();
